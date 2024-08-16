@@ -1,3 +1,19 @@
+-- Create a function to apply restrictive RLS policies
+CREATE OR REPLACE FUNCTION apply_dev_rls_policies(table_name text)
+RETURNS void AS $$
+BEGIN
+    -- Enable RLS on the table
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
+    
+    -- Create a policy that only allows access (read and write) when using the service role
+    EXECUTE format('CREATE POLICY "dev tables can be read and written to by anyone" ON %I FOR ALL USING  (true)', table_name);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Example usage:
+-- SELECT apply_dev_rls_policies('dev_table1');
+-- SELECT apply_dev_rls_policies('dev_table2');
+
 DROP TABLE IF EXISTS dev_profile CASCADE;
 DROP TABLE IF EXISTS dev_following CASCADE;
 DROP TABLE IF EXISTS dev_followers CASCADE;
@@ -8,16 +24,7 @@ DROP TABLE IF EXISTS dev_account CASCADE;
 DROP TABLE IF EXISTS dev_entities CASCADE;
 DROP TABLE IF EXISTS dev_media CASCADE;
 DROP TABLE IF EXISTS dev_users CASCADE;
-DROP TABLE IF EXISTS profile CASCADE;
-DROP TABLE IF EXISTS following CASCADE;
-DROP TABLE IF EXISTS followers CASCADE;
-DROP TABLE IF EXISTS tweet_media CASCADE;
-DROP TABLE IF EXISTS tweet_entities CASCADE;
-DROP TABLE IF EXISTS tweets CASCADE;
-DROP TABLE IF EXISTS account CASCADE;
-DROP TABLE IF EXISTS entities CASCADE;
-DROP TABLE IF EXISTS media CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
+
 
 -- Supabase AI is experimental and may produce incorrect answers
 -- Always verify the output before executing
@@ -80,15 +87,13 @@ CREATE TABLE
     account_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE,
     full_text TEXT,
-    lang TEXT,
+    -- lang TEXT,
     retweet_count INTEGER,
     favorite_count INTEGER,
     reply_to_tweet_id TEXT,
     reply_to_user_id TEXT,
     reply_to_username TEXT,
     is_retweet BOOLEAN,
-    source TEXT,
-    possibly_sensitive BOOLEAN,
     FOREIGN KEY (account_id) REFERENCES dev_account (account_id)
   );
 
@@ -140,41 +145,13 @@ CREATE TABLE
 
 
 
--- Enable Row Level Security (RLS) on all tables
-ALTER TABLE dev_profile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_account ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_tweets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_tweet_entities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_tweet_media ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_followers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dev_following ENABLE ROW LEVEL SECURITY;
-
-
--- Create new policies
-CREATE POLICY "Allow full access to dev_account table" ON dev_account USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_profile table" ON dev_profile USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_tweets table" ON dev_tweets USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_tweet_entities table" ON dev_tweet_entities USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_tweet_media table" ON dev_tweet_media USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_followers table" ON dev_followers USING (TRUE)
-WITH
-  CHECK (TRUE);
-
-CREATE POLICY "Allow full access to dev_following table" ON dev_following USING (TRUE)
-WITH
-  CHECK (TRUE);
+DO $$
+DECLARE
+    tables text[] := ARRAY['dev_profile', 'dev_account', 'dev_tweets', 'dev_tweet_entities', 'dev_tweet_media', 'dev_followers', 'dev_following'];
+    t text;
+BEGIN
+    FOREACH t IN ARRAY tables
+    LOOP
+        PERFORM apply_dev_rls_policies(t);
+    END LOOP;
+END $$;
