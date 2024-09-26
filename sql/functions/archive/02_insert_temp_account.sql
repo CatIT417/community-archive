@@ -16,10 +16,10 @@ $1->>''createdVia'',
 $1->>''username'',
 ($1->>''createdAt'')::TIMESTAMP WITH TIME ZONE,
 $1->>''accountDisplayName'',
-COALESCE(($1->>''numTweets'')::INTEGER, 0),
-COALESCE(($1->>''numFollowing'')::INTEGER, 0),
-COALESCE(($1->>''numFollowers'')::INTEGER, 0),
-COALESCE(($1->>''numLikes'')::INTEGER, 0)
+COALESCE(($1->>''num_tweets'')::INTEGER, 0),
+COALESCE(($1->>''num_following'')::INTEGER, 0),
+COALESCE(($1->>''num_followers'')::INTEGER, 0),
+COALESCE(($1->>''num_likes'')::INTEGER, 0)
 ', p_suffix)
 USING p_account;
 END;
