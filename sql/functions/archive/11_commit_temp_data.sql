@@ -14,17 +14,25 @@ BEGIN
     IF auth.uid() IS NULL AND current_user != 'postgres' THEN
         RAISE EXCEPTION 'Not authenticated';
     END IF;
-
     -- 1. Insert account data first
     EXECUTE format('
-        INSERT INTO public.account (created_via, username, account_id, created_at, account_display_name)
-        SELECT created_via, username, account_id, created_at, account_display_name
+        INSERT INTO public.account (
+            created_via, username, account_id, created_at, account_display_name,
+            num_tweets, num_following, num_followers, num_likes
+        )
+        SELECT 
+            created_via, username, account_id, created_at, account_display_name,
+            num_tweets, num_following, num_followers, num_likes
         FROM temp.account_%s
         ON CONFLICT (account_id) DO UPDATE SET
             username = EXCLUDED.username,
             account_display_name = EXCLUDED.account_display_name,
             created_via = EXCLUDED.created_via,
-            created_at = EXCLUDED.created_at
+            created_at = EXCLUDED.created_at,
+            num_tweets = EXCLUDED.num_tweets,
+            num_following = EXCLUDED.num_following,
+            num_followers = EXCLUDED.num_followers,
+            num_likes = EXCLUDED.num_likes
         RETURNING account_id
     ', p_suffix) INTO v_account_id;
 
