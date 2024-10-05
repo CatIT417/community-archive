@@ -39,7 +39,8 @@ using (
     OR
     EXISTS (
       SELECT 1 FROM public.archive_upload au
-      WHERE au.account_id = ((( SELECT auth.jwt() AS jwt) -> 'app_metadata'::text) ->> 'provider_id'::text)
+      JOIN public.account acc ON au.account_id = acc.account_id
+      WHERE acc.username = (storage.foldername(name))[1]
       AND au.keep_private = false
       AND au.archive_at = (
         SELECT MAX(archive_at)
