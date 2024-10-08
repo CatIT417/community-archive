@@ -1,6 +1,6 @@
 
 CREATE
-OR REPLACE FUNCTION public.get_account_most_replied_tweets_by_archive_users (username_ TEXT, limit_count INTEGER) RETURNS TABLE (
+OR REPLACE FUNCTION public.get_account_most_replied_tweets_by_archive_users (username_ TEXT, limit_ INTEGER) RETURNS TABLE (
   tweet_id TEXT,
   account_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE,
@@ -41,6 +41,6 @@ BEGIN
     ORDER BY 
         num_replies DESC 
     LIMIT 
-        limit_count;
+        limit_;
 END;
 $$ LANGUAGE plpgsql;
