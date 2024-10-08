@@ -30,6 +30,11 @@ BEGIN
     SELECT a.account_id INTO from_account_id
     FROM account as a
     WHERE a.username = from_user;
+    
+    -- Return empty if from_user not found
+    IF from_account_id IS NULL THEN
+      RETURN;
+    END IF;
   END IF;
 
   -- Get account_id for to_user
@@ -37,6 +42,11 @@ BEGIN
     SELECT a.account_id INTO to_account_id
     FROM account as a
     WHERE a.username = to_user;
+    
+    -- Return empty if to_user not found
+    IF to_account_id IS NULL THEN
+      RETURN;
+    END IF;
   END IF;
 
   RETURN QUERY
