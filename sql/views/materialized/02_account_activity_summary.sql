@@ -1,3 +1,5 @@
+DROP MATERIALIZED VIEW IF EXISTS public.account_activity_summary;
+
 CREATE MATERIALIZED VIEW public.account_activity_summary AS
 SELECT
   a.account_id,
@@ -23,16 +25,3 @@ SELECT
   ) f) AS most_favorited_tweets
 FROM public.account a;
 
-CREATE OR REPLACE FUNCTION refresh_account_activity_summary()
-RETURNS TRIGGER AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW public.account_activity_summary;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_account_activity_summary
-AFTER UPDATE OF upload_phase ON public.archive_upload
-FOR EACH ROW
-WHEN (NEW.upload_phase = 'completed')
-EXECUTE FUNCTION refresh_account_activity_summary();
