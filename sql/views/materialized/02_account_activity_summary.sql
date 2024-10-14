@@ -11,16 +11,14 @@ SELECT
   (SELECT json_agg(row_to_json(m)) FROM (
     SELECT * FROM get_account_most_mentioned_accounts(a.username, 20)
   ) m) AS mentioned_accounts,
-  -- (SELECT json_agg(row_to_json(l)) FROM (
-  --   SELECT * FROM get_account_most_liked_tweets_archive_users(a.username, 20)
-  -- ) l) AS most_liked_tweets_by_archive_users,
-  -- (SELECT json_agg(row_to_json(r)) FROM (
-  --   SELECT * FROM get_account_most_replied_tweets_by_archive_users(a.username, 20)
-  -- ) r) AS most_replied_tweets_by_archive_users,
   (SELECT json_agg(row_to_json(rt)) FROM (
     SELECT * FROM get_account_top_retweet_count_tweets(a.username, 100)
   ) rt) AS most_retweeted_tweets,
   (SELECT json_agg(row_to_json(f)) FROM (
     SELECT * FROM get_account_top_favorite_count_tweets(a.username, 100)
-  ) f) AS most_favorited_tweets
+  ) f) AS most_favorited_tweets,
+  CURRENT_TIMESTAMP AS last_updated
 FROM public.account a;
+
+CREATE UNIQUE INDEX idx_account_activity_summary_account_id
+ON public.account_activity_summary (account_id);
