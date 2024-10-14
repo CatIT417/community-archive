@@ -72,8 +72,8 @@ WHERE key = v_job.key;
 -- Do the job
 IF v_job.key = 'refresh_activity_summary' THEN
     RAISE NOTICE 'Refreshing materialized views';
-    REFRESH MATERIALIZED VIEW public.global_activity_summary;
-    REFRESH MATERIALIZED VIEW public.account_activity_summary;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.global_activity_summary;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.account_activity_summary;
 END IF;
 
 -- Delete the job
