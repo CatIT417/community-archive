@@ -12,6 +12,9 @@ DECLARE
     v_phase_start TIMESTAMP;
     v_total_start TIMESTAMP;
     v_provider_id TEXT;
+    v_count BIGINT;
+    v_inserted BIGINT;
+    v_total BIGINT;
 BEGIN
     v_total_start := clock_timestamp();
     
@@ -22,8 +25,10 @@ BEGIN
     v_account_id := p_suffix;
     
     -- Verify the JWT provider_id matches the account_id
-    IF v_provider_id IS NULL OR v_provider_id != v_account_id THEN
-        RAISE EXCEPTION 'Unauthorized: provider_id % does not match account_id %', v_provider_id, v_account_id;
+    IF (v_provider_id IS NULL OR v_provider_id != v_account_id) 
+       AND current_user NOT IN ('postgres', 'service_role') THEN
+        RAISE EXCEPTION 'Unauthorized: provider_id %, account_id %, user %', 
+            v_provider_id, v_account_id, current_user::text;
     END IF;
 
     IF auth.uid() IS NULL AND current_user != 'postgres' THEN
@@ -45,7 +50,8 @@ BEGIN
     WHERE account_id = v_account_id
     AND upload_phase = 'ready_for_commit'
     ORDER BY created_at DESC
-    LIMIT 1;
+    LIMIT 1
+    FOR UPDATE;
 
     IF v_archive_upload_id IS NULL THEN
         RAISE EXCEPTION 'No archive_upload found in ready_for_commit state for account %', v_account_id ;
@@ -77,6 +83,10 @@ BEGIN
 
     v_phase_start := clock_timestamp();
     RAISE NOTICE 'Phase 5: Inserting tweets data';
+    -- Log count before insert
+    EXECUTE format('SELECT COUNT(*) FROM temp.tweets_%s', p_suffix) INTO v_count;
+    RAISE NOTICE 'About to insert % tweets', v_count;
+    
     -- Insert tweets data
     EXECUTE format('
         INSERT INTO public.tweets (tweet_id, account_id, created_at, full_text, retweet_count, favorite_count, reply_to_tweet_id, reply_to_user_id, reply_to_username, archive_upload_id)
@@ -91,6 +101,15 @@ BEGIN
             reply_to_username = EXCLUDED.reply_to_username,
             archive_upload_id = EXCLUDED.archive_upload_id
     ', p_suffix) USING v_archive_upload_id;
+    
+    -- Log how many were actually inserted/updated
+    EXECUTE format('
+        SELECT 
+            COUNT(*) FILTER (WHERE tweets.archive_upload_id = $1) as inserted,
+            COUNT(*) FILTER (WHERE tweets.tweet_id IN (SELECT tweet_id FROM temp.tweets_%s)) as total
+        FROM public.tweets
+    ', p_suffix) USING v_archive_upload_id INTO v_inserted, v_total;
+    RAISE NOTICE 'Inserted/Updated % out of % tweets', v_inserted, v_total;
     RAISE NOTICE 'Phase 5 completed in %', clock_timestamp() - v_phase_start;
 
     v_phase_start := clock_timestamp();
@@ -214,5 +233,3 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET statement_timeout TO '30min';
 
-
--- select public.commit_temp_data('322603863');
