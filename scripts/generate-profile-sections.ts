@@ -10,9 +10,10 @@
  * the most-quoted MAX_TWEETS_PER_YEAR per year, and asks the model once per
  * year for a thematic split; parseYearSections decides what survives.
  *
- * Append-only by default: a year that already has an entry is left alone so
+ * Append-only by default: a year that already has sections is left alone so
  * published titles and deep links stay stable across runs (the model is not
- * deterministic). --force regenerates every year of the selected accounts.
+ * deterministic); years recorded empty are retried. --force regenerates every
+ * year of the selected accounts.
  * Accounts that explicitly opted out of the directory are skipped.
  *
  * Needs in .env: CLICKHOUSE_ANALYTICS_API_URL, CLICKHOUSE_ANALYTICS_API_TOKEN,
@@ -266,7 +267,10 @@ async function main() {
     output.accounts[account.account_id] = entry
     let queued = 0
     byYear.forEach((tweets, year) => {
-      if (tweets.length < MIN_BANGERS || entry.years[year]) return
+      // Filled years are frozen; empty ones get another chance every run,
+      // since a provider slump can leave a year empty that the model can split.
+      if (tweets.length < MIN_BANGERS || entry.years[year]?.sections.length)
+        return
       jobs.push({ account, year, tweets })
       queued += 1
     })
